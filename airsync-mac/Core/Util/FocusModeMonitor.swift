@@ -83,8 +83,8 @@ class FocusModeMonitor {
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: assertionPath)),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let data = json["data"] as? [[String: Any]],
-           !data.isEmpty {
+           let assertions = json["data"] as? [[String: Any]],
+           !assertions.isEmpty {
             // If there are any assertions, Focus mode is likely active
             return true
         }
@@ -93,14 +93,18 @@ class FocusModeMonitor {
         let configPath = "\(NSHomeDirectory())/Library/DoNotDisturb/DB/ModeConfigurations.json"
         if let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let data = json["data"] as? [[String: Any]] {
+           let configurations = json["data"] as? [[String: Any]] {
             // Check if any mode is currently active
-            for mode in data {
+            // Note: The configuration file structure may vary across macOS versions.
+            // We conservatively return false if we can parse the file but cannot
+            // definitively determine an active state, relying on the primary
+            // assertion-based detection method above.
+            for mode in configurations {
                 if let mode = mode["mode"] as? [String: Any],
                    let configuration = mode["configuration"] as? [String: Any] {
-                    // Check for active mode indicators
-                    // This is a heuristic and may need adjustment
-                    return false // Conservative: assume off if we can't determine
+                    // Additional heuristics could be added here based on specific
+                    // configuration keys that indicate active focus modes
+                    return false
                 }
             }
         }
