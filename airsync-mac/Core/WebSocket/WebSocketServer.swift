@@ -99,6 +99,7 @@ class WebSocketServer: ObservableObject {
                 print("[websocket] WebSocket server started at ws://\(ip ?? "unknown"):\(port)/socket)")
 
                 self.startNetworkMonitoring()
+                self.startFocusModeMonitoring()
             } catch {
                 DispatchQueue.main.async {
                     AppState.shared.webSocketStatus = .failed(error: "\(error)")
@@ -119,6 +120,7 @@ class WebSocketServer: ObservableObject {
             AppState.shared.webSocketStatus = .stopped
         }
         stopNetworkMonitoring()
+        stopFocusModeMonitoring()
     }
 
 
@@ -622,6 +624,11 @@ class WebSocketServer: ObservableObject {
             // This case handles wake-up requests from Android to Mac
             // Currently not expected as Mac sends wake-up requests to Android, not vice versa
             print("[websocket] Received wakeUpRequest from Android (not typically expected)")
+            
+        case .focusModeUpdate:
+            // This case handles focus mode updates from Android to Mac
+            // Currently not expected as Mac sends focus mode updates to Android, not vice versa
+            print("[websocket] Received focusModeUpdate from Android (not typically expected)")
         }
 
 
@@ -1130,7 +1137,36 @@ class WebSocketServer: ObservableObject {
     func wakeUpLastConnectedDevice() {
         QuickConnectManager.shared.wakeUpLastConnectedDevice()
     }
-
+    
+    // MARK: - Focus Mode
+    
+    /// Send Focus mode state update to Android client
+    func sendFocusModeUpdate(enabled: Bool) {
+        let message = """
+        {
+            "type": "focusModeUpdate",
+            "data": {
+                "enabled": \(enabled)
+            }
+        }
+        """
+        sendToFirstAvailable(message: message)
+        print("[websocket] Sent Focus mode update: enabled=\(enabled)")
+    }
+    
+    /// Start monitoring Focus mode state changes
+    private func startFocusModeMonitoring() {
+        FocusModeMonitor.shared.onFocusModeChanged = { [weak self] enabled in
+            self?.sendFocusModeUpdate(enabled: enabled)
+        }
+        FocusModeMonitor.shared.startMonitoring()
+    }
+    
+    /// Stop monitoring Focus mode state changes
+    private func stopFocusModeMonitoring() {
+        FocusModeMonitor.shared.stopMonitoring()
+        FocusModeMonitor.shared.onFocusModeChanged = nil
+    }
 
 
 }

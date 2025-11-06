@@ -28,6 +28,8 @@ enum MessageType: String, Codable {
     case transferVerified
     // wake up / quick connect
     case wakeUpRequest
+    // focus mode
+    case focusModeUpdate
 }
 
 struct Message: Codable {
