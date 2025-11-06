@@ -14,7 +14,8 @@ class FocusModeMonitor {
     
     private var isMonitoring = false
     private var lastKnownState: Bool = false
-    private var observer: NSObjectProtocol?
+    private var focusModeObserver: NSObjectProtocol?
+    private var dndObserver: NSObjectProtocol?
     
     /// Callback to be invoked when Focus mode state changes
     var onFocusModeChanged: ((Bool) -> Void)?
@@ -29,7 +30,7 @@ class FocusModeMonitor {
         lastKnownState = checkFocusModeState()
         
         // Monitor distributed notification for Focus mode changes
-        observer = DistributedNotificationCenter.default().addObserver(
+        focusModeObserver = DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("com.apple.controlcenter.FocusModes.changed"),
             object: nil,
             queue: .main
@@ -38,12 +39,13 @@ class FocusModeMonitor {
         }
         
         // Also monitor DND state changes (for backward compatibility)
-        DistributedNotificationCenter.default().addObserver(
-            self,
-            selector: #selector(handleFocusModeChange),
-            name: NSNotification.Name("com.apple.notificationcenterui.dndswitchtoggled"),
-            object: nil
-        )
+        dndObserver = DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.apple.notificationcenterui.dndswitchtoggled"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleFocusModeChange()
+        }
         
         print("[focus-mode] Started monitoring Focus mode state")
     }
@@ -54,12 +56,15 @@ class FocusModeMonitor {
         
         isMonitoring = false
         
-        if let observer = observer {
+        if let observer = focusModeObserver {
             DistributedNotificationCenter.default().removeObserver(observer)
-            self.observer = nil
+            focusModeObserver = nil
         }
         
-        DistributedNotificationCenter.default().removeObserver(self)
+        if let observer = dndObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dndObserver = nil
+        }
         
         print("[focus-mode] Stopped monitoring Focus mode state")
     }
@@ -79,9 +84,10 @@ class FocusModeMonitor {
     /// Returns true if Focus mode is enabled, false otherwise
     private func checkFocusModeState() -> Bool {
         // Primary method: Check using the assertion file (most reliable)
-        let assertionPath = "\(NSHomeDirectory())/Library/DoNotDisturb/DB/Assertions.json"
+        let assertionPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/DoNotDisturb/DB/Assertions.json")
         
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: assertionPath)),
+        if let data = try? Data(contentsOf: assertionPath),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let assertions = json["data"] as? [[String: Any]],
            !assertions.isEmpty {
