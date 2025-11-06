@@ -258,6 +258,7 @@ JSON string → WebSocket text frame
 | `wakeUpRequest`              | Mac → Android | Wake device from sleep                  |
 | `toggleAppNotif`             | Mac → Android | Enable/disable app notifications        |
 | `disconnectRequest`          | Mac → Android | Request graceful disconnection          |
+| `focusModeUpdate`            | Mac → Android | Focus mode state change notification    |
 
 ---
 
@@ -678,6 +679,29 @@ Fields:
   "data": {}
 }
 ```
+
+---
+
+### 19. Focus Mode Update
+
+**Direction:** Mac → Android
+
+**Purpose:** Notify Android client when macOS Focus mode (Do Not Disturb) state changes
+
+```json
+{
+  "type": "focusModeUpdate",
+  "data": {
+    "enabled": true
+  }
+}
+```
+
+Fields:
+
+- `enabled` - Boolean indicating if Focus mode is currently enabled (true) or disabled (false)
+
+This message is sent automatically whenever the Focus mode state changes on the Mac, allowing the Android client to synchronize its own Focus mode or respond to the Mac's Focus mode state.
 
 ---
 
