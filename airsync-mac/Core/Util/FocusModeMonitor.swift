@@ -69,7 +69,7 @@ class FocusModeMonitor {
         print("[focus-mode] Stopped monitoring Focus mode state")
     }
     
-    @objc private func handleFocusModeChange() {
+    private func handleFocusModeChange() {
         let currentState = checkFocusModeState()
         
         // Only notify if state actually changed

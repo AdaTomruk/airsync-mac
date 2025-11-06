@@ -1142,16 +1142,22 @@ class WebSocketServer: ObservableObject {
     
     /// Send Focus mode state update to Android client
     func sendFocusModeUpdate(enabled: Bool) {
-        let message = """
-        {
+        let messageDict: [String: Any] = [
             "type": "focusModeUpdate",
-            "data": {
-                "enabled": \(enabled)
+            "data": [
+                "enabled": enabled
+            ]
+        ]
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: messageDict, options: [])
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                sendToFirstAvailable(message: jsonString)
+                print("[websocket] Sent Focus mode update: enabled=\(enabled)")
             }
+        } catch {
+            print("[websocket] Error creating Focus mode update message: \(error)")
         }
-        """
-        sendToFirstAvailable(message: message)
-        print("[websocket] Sent Focus mode update: enabled=\(enabled)")
     }
     
     /// Start monitoring Focus mode state changes
