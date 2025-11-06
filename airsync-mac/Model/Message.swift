@@ -30,6 +30,7 @@ enum MessageType: String, Codable {
     case wakeUpRequest
     // focus mode
     case focusModeUpdate
+    case focusModeUpdateResponse
 }
 
 struct Message: Codable {
