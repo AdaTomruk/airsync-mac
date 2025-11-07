@@ -1170,34 +1170,34 @@ class WebSocketServer: ObservableObject {
     
     /// Handle Focus mode update request from Android
     private func handleFocusModeUpdate(enabled: Bool) {
-        // Use AppleScript to toggle Do Not Disturb
-        // This is the most reliable public API method for controlling Focus mode
-        let script = enabled
-            ? """
-            tell application "System Events"
-                tell process "ControlCenter"
-                    set frontmost to true
-                end tell
-            end tell
-            do shell script "shortcuts run 'Do Not Disturb'"
-            """
-            : """
-            do shell script "shortcuts run 'Do Not Disturb'"
-            """
         
+        // 1. Determine the correct shortcut name based on the 'enabled' flag
+        let shortcutName = enabled ? "Enable-Focus-Mode" : "Disable-Focus-Mode"
+        
+        // 2. Create the simple AppleScript command to run the chosen shortcut
+        // Note: We escape the quotes (\") inside the string
+        let script = "do shell script \"shortcuts run '\(shortcutName)'\""
+        
+        // 3. Try to create and run the script
         if let appleScript = NSAppleScript(source: script) {
             var error: NSDictionary?
+            
+            // executeAndReturnError runs the script
             appleScript.executeAndReturnError(&error)
             
+            // 4. Check if an error occurred
             if let error = error {
-                print("[websocket] Error toggling Focus mode: \(error)")
+                // Log the error
+                print("[websocket] Error running shortcut '\(shortcutName)': \(error)")
                 sendFocusModeUpdateResponse(success: false)
             } else {
-                print("[websocket] Successfully toggled Focus mode to: \(enabled)")
+                // Success!
+                print("[websocket] Successfully ran shortcut: \(shortcutName)")
                 sendFocusModeUpdateResponse(success: true)
             }
         } else {
-            print("[websocket] Failed to create AppleScript for Focus mode toggle")
+            // This would happen if the 'script' string itself is badly formed
+            print("[websocket] Failed to create AppleScript instance for shortcut: \(shortcutName)")
             sendFocusModeUpdateResponse(success: false)
         }
     }
