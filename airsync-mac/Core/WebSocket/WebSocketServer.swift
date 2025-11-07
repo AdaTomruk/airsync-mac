@@ -99,6 +99,7 @@ class WebSocketServer: ObservableObject {
                 print("[websocket] WebSocket server started at ws://\(ip ?? "unknown"):\(port)/socket)")
 
                 self.startNetworkMonitoring()
+                self.startFocusModeMonitoring()
             } catch {
                 DispatchQueue.main.async {
                     AppState.shared.webSocketStatus = .failed(error: "\(error)")
@@ -119,6 +120,7 @@ class WebSocketServer: ObservableObject {
             AppState.shared.webSocketStatus = .stopped
         }
         stopNetworkMonitoring()
+        stopFocusModeMonitoring()
     }
 
 
@@ -622,6 +624,19 @@ class WebSocketServer: ObservableObject {
             // This case handles wake-up requests from Android to Mac
             // Currently not expected as Mac sends wake-up requests to Android, not vice versa
             print("[websocket] Received wakeUpRequest from Android (not typically expected)")
+            
+        case .focusModeUpdate:
+            // This case handles focus mode updates from Android to Mac
+            if let dict = message.data.value as? [String: Any],
+               let enabled = dict["enabled"] as? Bool {
+                print("[websocket] Received Focus mode update from Android: enabled=\(enabled)")
+                handleFocusModeUpdate(enabled: enabled)
+            }
+            
+        case .focusModeUpdateResponse:
+            // This case handles focus mode update responses from Android to Mac
+            // Currently not expected as Mac sends responses to Android, not vice versa
+            print("[websocket] Received focusModeUpdateResponse from Android (not typically expected)")
         }
 
 
@@ -1130,7 +1145,96 @@ class WebSocketServer: ObservableObject {
     func wakeUpLastConnectedDevice() {
         QuickConnectManager.shared.wakeUpLastConnectedDevice()
     }
-
+    
+    // MARK: - Focus Mode
+    
+    /// Send Focus mode state update to Android client
+    func sendFocusModeUpdate(enabled: Bool) {
+        let messageDict: [String: Any] = [
+            "type": "focusModeUpdate",
+            "data": [
+                "enabled": enabled
+            ]
+        ]
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: messageDict, options: [])
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                sendToFirstAvailable(message: jsonString)
+                print("[websocket] Sent Focus mode update: enabled=\(enabled)")
+            }
+        } catch {
+            print("[websocket] Error creating Focus mode update message: \(error)")
+        }
+    }
+    
+    /// Handle Focus mode update request from Android
+    private func handleFocusModeUpdate(enabled: Bool) {
+        // Use AppleScript to toggle Do Not Disturb
+        // This is the most reliable public API method for controlling Focus mode
+        let script = enabled
+            ? """
+            tell application "System Events"
+                tell process "ControlCenter"
+                    set frontmost to true
+                end tell
+            end tell
+            do shell script "shortcuts run 'Do Not Disturb'"
+            """
+            : """
+            do shell script "shortcuts run 'Do Not Disturb'"
+            """
+        
+        if let appleScript = NSAppleScript(source: script) {
+            var error: NSDictionary?
+            appleScript.executeAndReturnError(&error)
+            
+            if let error = error {
+                print("[websocket] Error toggling Focus mode: \(error)")
+                sendFocusModeUpdateResponse(success: false)
+            } else {
+                print("[websocket] Successfully toggled Focus mode to: \(enabled)")
+                sendFocusModeUpdateResponse(success: true)
+            }
+        } else {
+            print("[websocket] Failed to create AppleScript for Focus mode toggle")
+            sendFocusModeUpdateResponse(success: false)
+        }
+    }
+    
+    /// Send response back to Android after handling Focus mode update
+    private func sendFocusModeUpdateResponse(success: Bool) {
+        let messageDict: [String: Any] = [
+            "type": "focusModeUpdateResponse",
+            "data": [
+                "success": success
+            ]
+        ]
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: messageDict, options: [])
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                sendToFirstAvailable(message: jsonString)
+                print("[websocket] Sent Focus mode update response: success=\(success)")
+            }
+        } catch {
+            print("[websocket] Error creating Focus mode update response: \(error)")
+        }
+    }
+    
+    /// Start monitoring Focus mode state changes
+    private func startFocusModeMonitoring() {
+        FocusModeMonitor.shared.onFocusModeChanged = { [weak self] enabled in
+            self?.sendFocusModeUpdate(enabled: enabled)
+        }
+        FocusModeMonitor.shared.startMonitoring()
+    }
+    
+    /// Stop monitoring Focus mode state changes
+    private func stopFocusModeMonitoring() {
+        FocusModeMonitor.shared.stopMonitoring()
+        FocusModeMonitor.shared.onFocusModeChanged = nil
+    }
 
 
 }

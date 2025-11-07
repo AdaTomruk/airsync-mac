@@ -258,6 +258,8 @@ JSON string → WebSocket text frame
 | `wakeUpRequest`              | Mac → Android | Wake device from sleep                  |
 | `toggleAppNotif`             | Mac → Android | Enable/disable app notifications        |
 | `disconnectRequest`          | Mac → Android | Request graceful disconnection          |
+| `focusModeUpdate`            | Either        | Focus mode state change notification    |
+| `focusModeUpdateResponse`    | Mac → Android | Focus mode update execution result      |
 
 ---
 
@@ -678,6 +680,67 @@ Fields:
   "data": {}
 }
 ```
+
+---
+
+### 19. Focus Mode Update
+
+**Direction:** Either (Mac ↔ Android)
+
+**Purpose:** Synchronize Focus mode (Do Not Disturb) state between Mac and Android
+
+**Mac → Android (Automatic notification):**
+
+When Focus mode state changes on Mac, this message is sent automatically to notify Android clients:
+
+```json
+{
+  "type": "focusModeUpdate",
+  "data": {
+    "enabled": true
+  }
+}
+```
+
+**Android → Mac (Control request):**
+
+Android can send this message to request Mac to enable or disable Focus mode:
+
+```json
+{
+  "type": "focusModeUpdate",
+  "data": {
+    "enabled": false
+  }
+}
+```
+
+Fields:
+
+- `enabled` - Boolean indicating if Focus mode should be enabled (true) or disabled (false)
+
+This bidirectional message enables full synchronization between Mac and Android Focus modes. When received by Mac, it attempts to toggle the Do Not Disturb state using system shortcuts, and responds with a `focusModeUpdateResponse` message.
+
+---
+
+### 20. Focus Mode Update Response
+
+**Direction:** Mac → Android
+
+**Purpose:** Confirm execution of Focus mode control request from Android
+
+```json
+{
+  "type": "focusModeUpdateResponse",
+  "data": {
+    "success": true
+  }
+}
+```
+
+Fields:
+
+- `success` - Boolean indicating if the Focus mode toggle was successful
 
 ---
 
