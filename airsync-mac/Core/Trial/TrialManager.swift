@@ -234,7 +234,8 @@ final class TrialManager: ObservableObject {
         #if SELF_COMPILED
         // In self-compiled builds, Plus is always enabled - don't override it
         return
-        #else
+        #endif
+        
         let appState = AppState.shared
         if isTrialActive {
             if !appState.isPlus {
@@ -245,7 +246,6 @@ final class TrialManager: ObservableObject {
                 appState.isPlus = false
             }
         }
-        #endif
     }
 
     private func observeLicenseChanges() {
