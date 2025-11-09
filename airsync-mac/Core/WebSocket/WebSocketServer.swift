@@ -39,6 +39,9 @@ class WebSocketServer: ObservableObject {
     private var lastKnownIP: String?
     private var networkMonitorTimer: Timer?
     private let networkCheckInterval: TimeInterval = 10.0 // seconds
+    
+    // Focus mode manager
+    private var focusManager: FocusManager?
 
     // Incoming file transfers (Android -> Mac) — keep only IO here; state lives in AppState
     private struct IncomingFileIO {
@@ -1224,16 +1227,20 @@ class WebSocketServer: ObservableObject {
     
     /// Start monitoring Focus mode state changes
     private func startFocusModeMonitoring() {
-        FocusModeMonitor.shared.onFocusModeChanged = { [weak self] enabled in
-            self?.sendFocusModeUpdate(enabled: enabled)
+        // Only available on macOS 12.0+
+        if #available(macOS 12.0, *) {
+            focusManager = FocusManager()
+            focusManager?.onFocusModeChanged = { [weak self] enabled in
+                self?.sendFocusModeUpdate(enabled: enabled)
+            }
+            focusManager?.requestPermission()
         }
-        FocusModeMonitor.shared.startMonitoring()
     }
     
     /// Stop monitoring Focus mode state changes
     private func stopFocusModeMonitoring() {
-        FocusModeMonitor.shared.stopMonitoring()
-        FocusModeMonitor.shared.onFocusModeChanged = nil
+        focusManager?.onFocusModeChanged = nil
+        focusManager = nil
     }
 
 
