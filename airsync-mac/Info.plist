@@ -42,5 +42,7 @@
 	<string>$(TRIAL_SECRET)</string>
 	<key>UpdateFeedURL</key>
 	<string>https://sameerasw.github.io/airsync-mac/releases/latest</string>
+	<key>NSFocusStatusUsageDescription</key>
+	<string>To check if a Focus Mode is active </string>
 </dict>
 </plist>
