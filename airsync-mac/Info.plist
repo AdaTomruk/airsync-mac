@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>AirSync uses Bluetooth to trigger hotspot on your Android phone</string>
 	<key>AndroidVersion</key>
 	<string>2.1.4</string>
 	<key>CFBundleIcons</key>

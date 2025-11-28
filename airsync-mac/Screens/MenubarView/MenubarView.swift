@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import CoreBluetooth
 
 struct MenubarView: View {
     @Environment(\.openWindow) var openWindow
     @StateObject private var appState = AppState.shared
+    @StateObject private var bleManager = BLEManager.shared
     @AppStorage("hasPairedDeviceOnce") private var hasPairedDeviceOnce: Bool = false
     private var appDelegate: AppDelegate? { AppDelegate.shared }
 
@@ -127,6 +129,28 @@ struct MenubarView: View {
                             modifiers: [.command, .shift]
                         )
                     }
+
+                    // BLE Hotspot Button
+                    GlassButtonView(
+                        label: "Hotspot",
+                        systemImage: "wifi.circle",
+                        iconOnly: true,
+                        circleSize: toolButtonSize,
+                        action: {
+                            bleManager.triggerHotspot { success, error in
+                                if !success {
+                                    print("[MenubarView] Hotspot trigger failed: \(error ?? "Unknown error")")
+                                }
+                            }
+                        }
+                    )
+                    .transition(.identity)
+                    .keyboardShortcut(
+                        "h",
+                        modifiers: .command
+                    )
+                    .help(bleManager.isBluetoothEnabled ? "Toggle hotspot on Android device" : "Bluetooth not available")
+                    .disabled(!bleManager.isBluetoothEnabled)
 
                     GlassButtonView(
                         label: "Quit",
